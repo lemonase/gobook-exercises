@@ -33,15 +33,23 @@ var palette = []color.Color{color.White, color.Black}
 var cpalette = []color.Color{
 	color.White,
 	color.Black,
-	color.RGBA{0xF5, 0xE6, 0x42, 0xFF}, // Yellow
+	color.RGBA{0x15, 0xFF, 0xDC, 0xFF}, // Cyan
 	color.RGBA{0x9B, 0x42, 0xF5, 0xFF}, // Purple
-	color.RGBA{0x2D, 0xDE, 0xD0, 0xFF}, // Green
+	color.RGBA{0x08, 0x5E, 0xFF, 0xFF}, // Indigo
 	color.RGBA{0x42, 0x8A, 0xF5, 0xFF}, // Blue
+	color.RGBA{0x2D, 0xDE, 0xD0, 0xFF}, // Green
+	color.RGBA{0xF5, 0xE6, 0x42, 0xFF}, // Yellow
+	color.RGBA{0xFF, 0x55, 0x00, 0xFF}, // Orange
+	color.RGBA{0xE3, 0x00, 0x17, 0xFF}, // Red
 }
 
 const (
 	whiteIndex = 0 // first color in palette
-	blackIndex = 4 // next color in palette
+	blackIndex = 1 // next color in palette
+	yellowIndex = 2
+	purpleIndex = 3
+	greenIndex = 4
+	blueIndex = 5
 )
 
 func main() {
@@ -69,13 +77,13 @@ func lissajous(out io.Writer) {
 	const (
 		cycles  = 100     // number of complete x oscillator revolutions
 		res     = 0.001 // angular resolution
-		size    = 400   // image canvas covers [-size..+size]
+		size    = 800   // image canvas covers [-size..+size]
 		nframes = 128    // number of animation frames
 		delay   = 4     // delay between frames in 10ms units
 	)
 	freq := rand.Float64() * 3.0 // relative frequency of y oscillator
 	anim := gif.GIF{LoopCount: nframes}
-	phase := 2.0 // phase difference
+	phase := 5.0 // phase difference
 	for i := 0; i < nframes; i++ {
 		rect := image.Rect(0, 0, 2*size+1, 2*size+1)
 		img := image.NewPaletted(rect, cpalette)
@@ -90,7 +98,7 @@ func lissajous(out io.Writer) {
 			x := math.Sin(t)
 			y := math.Sin(t*freq + phase)
 			img.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5),
-				blackIndex)
+				uint8(t) % uint8(len(cpalette)))
 		}
 
 		phase += 0.1
