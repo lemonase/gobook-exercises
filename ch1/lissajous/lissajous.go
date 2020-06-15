@@ -9,6 +9,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -44,12 +45,12 @@ var cpalette = []color.Color{
 }
 
 const (
-	whiteIndex = 0 // first color in palette
-	blackIndex = 1 // next color in palette
+	whiteIndex  = 0 // first color in palette
+	blackIndex  = 1 // next color in palette
 	yellowIndex = 2
 	purpleIndex = 3
-	greenIndex = 4
-	blueIndex = 5
+	greenIndex  = 4
+	blueIndex   = 5
 )
 
 func main() {
@@ -62,7 +63,12 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "web" {
 		//!+http
 		handler := func(w http.ResponseWriter, r *http.Request) {
+			for n, v := range r.Header {
+				fmt.Println(n, v)
+			}
+			fmt.Println(r.URL)
 			lissajous(w)
+			fmt.Println()
 		}
 		http.HandleFunc("/", handler)
 		//!-http
@@ -75,10 +81,10 @@ func main() {
 
 func lissajous(out io.Writer) {
 	const (
-		cycles  = 100     // number of complete x oscillator revolutions
+		cycles  = 100   // number of complete x oscillator revolutions
 		res     = 0.001 // angular resolution
-		size    = 800   // image canvas covers [-size..+size]
-		nframes = 128    // number of animation frames
+		size    = 400   // image canvas covers [-size..+size]
+		nframes = 64    // number of animation frames
 		delay   = 4     // delay between frames in 10ms units
 	)
 	freq := rand.Float64() * 3.0 // relative frequency of y oscillator
@@ -98,7 +104,7 @@ func lissajous(out io.Writer) {
 			x := math.Sin(t)
 			y := math.Sin(t*freq + phase)
 			img.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5),
-				uint8(t) % uint8(len(cpalette)))
+				uint8(t)%uint8(len(cpalette)))
 		}
 
 		phase += 0.1
