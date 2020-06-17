@@ -17,6 +17,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"strconv"
 )
 
 //!-main
@@ -54,64 +55,108 @@ const (
 )
 
 func main() {
-	//!-main
 	// The sequence of images is deterministic unless we seed
 	// the pseudo-random number generator using the current time.
 	// Thanks to Randall McPherson for pointing out the omission.
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if len(os.Args) > 1 && os.Args[1] == "web" {
-		//!+http
 		handler := func(w http.ResponseWriter, r *http.Request) {
+			fmt.Println("Requested URL:", r.URL)
+
+			fmt.Printf("\n**********\n")
+			fmt.Println("[Headers]")
 			for n, v := range r.Header {
-				fmt.Println(n, v)
+				fmt.Fprintf(os.Stdout, "Header [%q] = %q\n", n, v)
 			}
-			fmt.Println(r.URL)
-			lissajous(w)
+
 			fmt.Println()
+			fmt.Println("[Form Parameters]")
+			if err := r.ParseForm(); err != nil {
+				log.Print(err)
+			}
+			for n, v := range r.Form {
+				fmt.Fprintf(os.Stdout, "Form [%q] = %q\n", n, v)
+			}
+			fmt.Println("**********")
+
+			start := time.Now()
+
+			lissajous(w, r.Form)
+			fmt.Printf("%.2fs to create GIF\n\n", time.Since(start).Seconds())
 		}
+
 		http.HandleFunc("/", handler)
-		//!-http
+		fmt.Printf("%s\n\n", "Listening on http://localhost:8000")
 		log.Fatal(http.ListenAndServe("localhost:8000", nil))
+
 		return
 	}
-	//!+main
-	lissajous(os.Stdout)
+	// lissajous(os.Stdout)
 }
 
-func lissajous(out io.Writer) {
-	const (
-		cycles  = 100   // number of complete x oscillator revolutions
+func lissajous(out io.Writer, formValues map[string][]string) {
+	var (
+		cycles  = 5     // number of complete x oscillator revolutions
 		res     = 0.001 // angular resolution
-		size    = 400   // image canvas covers [-size..+size]
+		size    = 100   // image canvas covers [-size..+size]
 		nframes = 64    // number of animation frames
-		delay   = 4     // delay between frames in 10ms units
+		delay   = 8     // delay between frames in 10ms units
 	)
+
+	for k, v := range formValues {
+		if k == "cycles" {
+			var err error
+			cycles, err = strconv.Atoi(v[0])
+			if err != nil {
+				fmt.Printf("%T, %v", cycles, cycles)
+			}
+		}
+		if k == "res" {
+			var err error
+			res, err = strconv.ParseFloat(v[0], 32)
+			if err != nil {
+				fmt.Printf("%T, %v", res, res)
+			}
+		}
+		if k == "size" {
+			var err error
+			size, err = strconv.Atoi(v[0])
+			if err != nil {
+				fmt.Printf("%T, %v", size, size)
+			}
+		}
+		if k == "nframes" {
+			var err error
+			nframes, err = strconv.Atoi(v[0])
+			if err != nil {
+				fmt.Printf("%T, %v", nframes, nframes)
+			}
+		}
+		if k == "delay" {
+			var err error
+			delay, err = strconv.Atoi(v[0])
+			if err != nil {
+				fmt.Printf("%T, %v", delay, delay)
+			}
+		}
+	}
+
 	freq := rand.Float64() * 3.0 // relative frequency of y oscillator
 	anim := gif.GIF{LoopCount: nframes}
-	phase := 5.0 // phase difference
+	phase := 0.0 // phase difference
 	for i := 0; i < nframes; i++ {
 		rect := image.Rect(0, 0, 2*size+1, 2*size+1)
 		img := image.NewPaletted(rect, cpalette)
-
-		for x := 0; x < 2*size+1; x++ {
-			for y := 0; y < 2*size+1; y++ {
-				img.Set(x, y, color.Black)
-			}
-		}
-
-		for t := 0.0; t < cycles*2*math.Pi; t += res {
+		for t := 0.0; t < float64(cycles)*2*math.Pi; t += float64(res) {
 			x := math.Sin(t)
 			y := math.Sin(t*freq + phase)
-			img.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5),
+			img.SetColorIndex(size+int(x*float64(size)+0.5), size+int(y*float64(size)+0.5),
 				uint8(t)%uint8(len(cpalette)))
 		}
-
 		phase += 0.1
 		anim.Delay = append(anim.Delay, delay)
 		anim.Image = append(anim.Image, img)
 	}
 	gif.EncodeAll(out, &anim) // NOTE: ignoring encoding errors
 }
-
-//!-main
